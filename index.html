@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>基于javascript的语法解析器</title>
+</head>
+<body>
+    <script src="syntax.js"></script>
+    <script>
+
+        //界定符
+        var DelimiterLeft="{{",
+            DelimiterRight="}}",
+            str="html::code{{str+'fsdf\\we'+.2/3}} javascript";
+
+        window.onload=function () {
+
+            //获取界定符位置
+            var DelimiterStart=str.indexOf(DelimiterLeft),
+                DelimiterEnd=str.indexOf(DelimiterRight);
+
+            //检查界定符是否完整
+            if(str.indexOf(DelimiterLeft) === -1  || str.indexOf(DelimiterRight) === -1 )return
+
+            //截取界定符中的字符
+            str=str.slice(DelimiterStart+DelimiterLeft.length).slice(0,DelimiterEnd-DelimiterStart-DelimiterLeft.length)
+
+            syntax(str)
+
+        }
+
+    </script>
+</body>
+</html>
