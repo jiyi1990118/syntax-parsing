@@ -92,7 +92,7 @@
                     return false;
             }
         },
-        codePointAt:function (cp) {
+        codePointAt: function (cp) {
             if (cp >= 0xD800 && cp <= 0xDBFF) {
                 var second = this.source.charCodeAt(i + 1);
                 if (second >= 0xDC00 && second <= 0xDFFF) {
@@ -104,21 +104,21 @@
     };
 
     //语法原子类型
-    var atomType={
+    var atomType = {
         //空
-        Null:'Null',
+        Null: 'Null',
         //字符
-        String:'String',
+        String: 'String',
         //关键字
-        Keyword:'Keyword',
+        Keyword: 'Keyword',
         //布尔
-        Boolean:'Boolean',
+        Boolean: 'Boolean',
         //数字
-        Numeric:'Numeric',
+        Numeric: 'Numeric',
         //符号
-        Punctuator:'Punctuator',
+        Punctuator: 'Punctuator',
         //标识符
-        Identifier:'Identifier'
+        Identifier: 'Identifier'
     }
 
     //语法解析
@@ -134,7 +134,7 @@
         //原子存储器
         this.atoms = [];
 
-        while (this.atomLex()){
+        while (this.atomLex()) {
 
         }
     }
@@ -170,19 +170,19 @@
                 atom = this.PunctuatorLex();
             }
             //检查是否数字字符
-        }else if (strGate.isDecimalDigit(cp)) {
+        } else if (strGate.isDecimalDigit(cp)) {
             //数字扫描
             atom = this.NumericLiteralLex();
             //标识符起始字符范围 检查是否标识符起始字符
-        }else if (cp >= 0xD800 && cp < 0xDFFF && strGate.isIdentifierStart(strGate.codePointAt(cp))) {
+        } else if (cp >= 0xD800 && cp < 0xDFFF && strGate.isIdentifierStart(strGate.codePointAt(cp))) {
             //标识符扫描
             atom = this.IdentifierLex();
-        }else{
+        } else {
             //符号扫描
             atom = this.PunctuatorLex();
         }
 
-        if(!atom)return;
+        if (!atom)return;
 
         this.atoms.push(atom);
 
@@ -191,9 +191,9 @@
 
     //原子类型扫描
     (function (scan) {
-        
+
         // 标识符
-        scan.IdentifierLex=function () {
+        scan.IdentifierLex = function () {
             var ch,
                 type,
                 start = this.index++;
@@ -206,16 +206,16 @@
                 }
             }
 
-            var id= this.source.slice(start, this.index);
+            var id = this.source.slice(start, this.index);
 
             //只有一个字符，因此它必定是标识符。
             if (id.length === 1) {
-                type =atomType.Identifier;
+                type = atomType.Identifier;
                 //关键字
             } else if (strGate.isKeyword(id)) {
                 type = atomType.Keyword;
                 //空
-            }else if (id === 'null') {
+            } else if (id === 'null') {
                 type = atomType.Null;
                 //布尔值
             } else if (id === 'true' || id === 'false') {
@@ -232,73 +232,172 @@
                 end: this.index
             };
         };
-        
+
+
+        /*
+         * dot 点号
+         * unitary 一元运算符
+         * single 加减运算
+         * complex 乘除 乘方 运算
+         * logical 逻辑运算
+         * bitwise 位运算
+         * ternary 三元运算
+         * comma 逗号
+         * semicolon 分号
+         * colon 冒号
+         * interrogation 问号
+         * bracketsLeft 左括号
+         * bracketsRight 右括号
+         * keySymbol 关键符号
+         * assignment 分配运算
+         * update 自运算
+         * */
+
         //标点
-        scan.PunctuatorLex=function () {
-            var start = this.index;
+        scan.PunctuatorLex = function () {
+            var identity,
+                start = this.index;
 
             //获取当前字符
             var str = this.source[this.index++];
 
             switch (str) {
-                case '(':
                 case '{':
-                    if (str === '{') {
-                        this.curlyStack.push('{');
-                    }
+                    this.curlyStack.push('{');
+                    break;
+                case '[':
+                case '(':
+                    identity = 'bracketsLeft';
+                    break;
+                case '}':
+                    this.curlyStack.pop();
+                case ']':
+                case ')':
+                    identity = 'bracketsRight';
                     break;
                 case '.':
+                    identity = 'dot'
                     if (this.source[this.index] === '.' && this.source[this.index + 1] === '.') {
                         // ...符号
                         this.index += 2;
                         str = '...';
+                        identity = 'keySymbol'
                     }
                     break;
-                case '}':
-                    this.curlyStack.pop();
-                    break;
-                case ')':
                 case ';':
+                    identity = 'semicolon';
+                    break;
                 case ',':
-                case '[':
-                case ']':
+                    identity = 'comma';
+                    break;
                 case ':':
+                    identity = 'colon';
+                    break;
                 case '?':
+                    identity = 'interrogation';
+                    break;
                 case '~':
+                    identity = 'unitary';
                     break;
                 default:
-                    this.index--;
 
                     // 4个字符长度的符号
                     str = this.source.substr(this.index, 4);
                     if (str === '>>>=') {
-                        this.index += 4;
-                    }
-                    else {
+                        this.index += 3;
+                        identity = 'assignment';
+                    } else {
                         // 3个字符长度的符号
                         str = str.substr(0, 3);
-                        if (str === '===' || str === '!==' || str === '>>>' ||
-                            str === '<<=' || str === '>>=' || str === '**=') {
-                            this.index += 3;
-                        }
-                        else {
-                            // 2个字符长度的符号
-                            str = str.substr(0, 2);
-                            if (str === '&&' || str === '||' || str === '==' || str === '!=' ||
-                                str === '+=' || str === '-=' || str === '*=' || str === '/=' ||
-                                str === '++' || str === '--' || str === '<<' || str === '>>' ||
-                                str === '&=' || str === '|=' || str === '^=' || str === '%=' ||
-                                str === '<=' || str === '>=' || str === '=>' || str === '**') {
-                                this.index += 2;
-                            }
-                            else {
-                                // 1个字符长度的符号
-                                str = this.source[this.index];
-                                if ('<>=!+-*%&|^/'.indexOf(str) >= 0) {
-                                    ++this.index;
+                        this.index += 2;
+
+                        switch (str) {
+                            case '===':
+                            case '!==':
+                                identity = 'logical';
+                                break;
+                            case '>>>':
+                                identity = 'bitwise';
+                                break;
+                            case '<<=':
+                            case '>>=':
+                            case '**=':
+                                identity = 'assignment';
+                                break;
+                            default:
+                                // 2个字符长度的符号
+                                str = str.substr(0, 2);
+                                this.index --;
+
+                                switch (str){
+                                    case '||':
+                                    case '&&':
+                                    case '==':
+                                    case '!=':
+                                        identity = 'logical';
+                                        break;
+                                    case '++':
+                                    case '--':
+                                        identity = 'update';
+                                        break;
+                                    case '<<':
+                                    case '>>':
+                                        identity = 'bitwise';
+                                        break;
+                                    case '/=':
+                                    case '+=':
+                                    case '-=':
+                                    case '*=':
+                                    case '&=':
+                                    case '|=':
+                                    case '^=':
+                                    case '%=':
+                                    case '<=':
+                                    case '>=':
+                                        identity = 'assignment';
+                                        break;
+                                    case '**':
+                                        identity = 'complex';
+                                        break;
+                                    case '=>':
+                                        identity = 'keySymbol';
+                                        break;
+                                    default:
+                                        this.index -=2;
+                                        // 1个字符长度的符号
+                                        str = this.source[this.index++];
+                                        switch (str){
+                                            case '<':
+                                            case '>':
+                                                identity = 'logical';
+                                                break;
+                                            case '=':
+                                                identity = 'assignment';
+                                                break;
+                                            case '+':
+                                            case '-':
+                                                identity = 'single';
+                                                break;
+                                            case '*':
+                                            case '/':
+                                            case '%':
+                                                identity = 'complex';
+                                                break;
+                                            case '&':
+                                            case '|':
+                                            case '^':
+                                                identity = 'bitwise';
+                                                break;
+                                            case '!':
+                                                identity = 'unitary';
+                                                break;
+                                            default:
+                                                --this.index;
+                                        }
                                 }
-                            }
+
                         }
+
                     }
             }
 
@@ -306,18 +405,19 @@
                 return this.throwErr('标点错误');
             }
             return {
-                type:atomType.Punctuator,
+                type: atomType.Punctuator,
                 value: str,
                 start: start,
-                end: this.index
+                end: this.index,
+                identity:identity
             };
         }
-        
+
         //字符
-        scan.StringLiteralLex=function () {
+        scan.StringLiteralLex = function () {
             var start = this.index;
             var quote = this.source[start];
-            if(!(quote === '\'' || quote === '"')){
+            if (!(quote === '\'' || quote === '"')) {
                 return this.throwErr('String literal must starts with a quote');
             }
 
@@ -349,14 +449,14 @@
                 end: this.index
             };
         }
-        
+
         //数字
-        scan.NumericLiteralLex=function () {
+        scan.NumericLiteralLex = function () {
             var start = this.index;
             var ch = this.source[start];
 
             //检查是否数字或小数点开头
-            if(!(strGate.isDecimalDigit(ch.charCodeAt(0)) || (ch === '.'))){
+            if (!(strGate.isDecimalDigit(ch.charCodeAt(0)) || (ch === '.'))) {
                 return this.throwErr('数字文字必须以十进制数字或小数点开始')
             }
 
@@ -368,7 +468,7 @@
                 while (strGate.isDecimalDigit(this.source.charCodeAt(this.index))) {
                     num += this.source[this.index++];
                 }
-            }else {
+            } else {
                 num = this.source[this.index++];
                 //遍历获取后续字符并判断是否数字
                 while (strGate.isDecimalDigit(this.source.charCodeAt(this.index))) {
@@ -387,7 +487,7 @@
                 end: this.index
             };
         }
-        
+
     })(syntaxParser.prototype);
 
 
