@@ -133,11 +133,141 @@
         this.curlyStack = [];
         //原子存储器
         this.atoms = [];
+        //表达式扫描
+        this.expressionLex();
+        //语法表达式结构
+        this.expStruct=null;
+        //语法表达式处理临时数据
+        this.expTemp={
+            valueType:null,
+            valueExp:null
+        }
 
-        while (this.atomLex()) {
+    };
+
+    //语法表达式扫描
+    syntaxParser.prototype.expressionLex=function (atom,isAdopt) {
+        atom=atom||this.atomLex();
+        isAdopt=typeof isAdopt === "undefined"?true:isAdopt;
+
+        var struct,
+            expTemp=this.expTemp;
+
+        //检查表达式值类型
+        switch (expTemp.valueType){
+            //字面量
+            case 'literal':
+
+                break;
+            //标识量
+            case 'identifier':
+
+                break;
+            default:
+                //元素类型
+                switch (atom.type){
+                    case atomType.Punctuator:
+                        switch (atom.identity){
+                            //一元运算符
+                            case "unitary":
+
+                                break;
+                            //分号
+                            case "semicolon":
+
+                                break;
+                            //自运算
+                            case "update":
+
+                                break;
+                            //左括号
+                            case "bracketsLeft":
+
+                                break;
+                            default:
+
+                                break;
+                        }
+                        break;
+                    case atomType.Null:
+                    case atomType.String:
+                    case atomType.Numeric:
+                    case atomType.Boolean:
+
+                        break;
+                    case atomType.Keyword:
+                    case atomType.Identifier:
+
+                        break;
+                }
 
         }
-    }
+
+
+    };
+
+    /*
+    * UnaryExpression 一元表达式
+    * BinaryExpression 二元表达式
+    * TernaryExpression 三元表达式
+    * UpdateExpression 自运算
+    * AssignmentExpression 分配运算
+    * MemberExpression 成员表达式
+    * ArrayExpression 数组表达式
+    * ObjectExpression 对象表达式
+    * ObjectExpression 过滤器表达式
+    * */
+
+    //表达式规则
+    (function (expression) {
+
+        //一元表达式
+        expression.expUnary=function () {
+
+        }
+
+        //二元表达式
+        expression.expBinary=function () {
+
+        }
+
+        //三元表达式
+        expression.expTernary=function () {
+
+        }
+
+        //自运算
+        expression.expUpdate=function () {
+
+        }
+
+        //分配表达式
+        expression.expAssignment=function () {
+
+        }
+
+        //成员表达式
+        expression.expMember=function () {
+
+        }
+
+        //数组表达式
+        expression.expArray=function () {
+
+        }
+
+        //对象表达式
+        expression.expObject=function () {
+
+        }
+
+        //过滤表达式
+        expression.expFilter=function () {
+
+        }
+
+
+    })(syntaxParser.prototype);
 
     //原子扫描
     syntaxParser.prototype.atomLex = function () {
@@ -235,27 +365,28 @@
 
 
         /*
-         * dot 点号
-         * unitary 一元运算符
-         * single 加减运算
-         * complex 乘除 乘方 运算
-         * logical 逻辑运算
-         * bitwise 位运算
-         * ternary 三元运算
-         * comma 逗号
-         * semicolon 分号
-         * colon 冒号
-         * interrogation 问号
-         * bracketsLeft 左括号
-         * bracketsRight 右括号
-         * keySymbol 关键符号
-         * assignment 分配运算
-         * update 自运算
+         * dot 点号 1
+         * unitary 一元运算符 2
+         * single 加减运算 4
+         * complex 乘除 乘方 运算 3
+         * logical 逻辑运算 6
+         * bitwise 位运算 5
+         * ternary 三元运算 7
+         * comma 逗号 1
+         * semicolon 分号 1
+         * colon 冒号 7
+         * interrogation 问号 7
+         * bracketsLeft 左括号 2
+         * bracketsRight 右括号 2
+         * keySymbol 关键符号 8
+         * assignment 分配运算 8
+         * update 自运算 1
          * */
 
         //标点
         scan.PunctuatorLex = function () {
             var identity,
+                priority,
                 start = this.index;
 
             //获取当前字符
@@ -264,39 +395,47 @@
             switch (str) {
                 case '{':
                     this.curlyStack.push('{');
-                    break;
                 case '[':
                 case '(':
+                    priority=2;
                     identity = 'bracketsLeft';
                     break;
                 case '}':
                     this.curlyStack.pop();
                 case ']':
                 case ')':
+                    priority=2;
                     identity = 'bracketsRight';
                     break;
                 case '.':
+                    priority=1;
                     identity = 'dot'
                     if (this.source[this.index] === '.' && this.source[this.index + 1] === '.') {
                         // ...符号
                         this.index += 2;
                         str = '...';
+                        priority=8;
                         identity = 'keySymbol'
                     }
                     break;
                 case ';':
+                    priority=1;
                     identity = 'semicolon';
                     break;
                 case ',':
+                    priority=1;
                     identity = 'comma';
                     break;
                 case ':':
+                    priority=7;
                     identity = 'colon';
                     break;
                 case '?':
+                    priority=7;
                     identity = 'interrogation';
                     break;
                 case '~':
+                    priority=2;
                     identity = 'unitary';
                     break;
                 default:
@@ -305,6 +444,7 @@
                     str = this.source.substr(this.index, 4);
                     if (str === '>>>=') {
                         this.index += 3;
+                        priority=8;
                         identity = 'assignment';
                     } else {
                         // 3个字符长度的符号
@@ -314,14 +454,17 @@
                         switch (str) {
                             case '===':
                             case '!==':
+                                priority=6;
                                 identity = 'logical';
                                 break;
                             case '>>>':
+                                priority=5;
                                 identity = 'bitwise';
                                 break;
                             case '<<=':
                             case '>>=':
                             case '**=':
+                                priority=8;
                                 identity = 'assignment';
                                 break;
                             default:
@@ -334,14 +477,19 @@
                                     case '&&':
                                     case '==':
                                     case '!=':
+                                    case '<=':
+                                    case '>=':
+                                        priority=6;
                                         identity = 'logical';
                                         break;
                                     case '++':
                                     case '--':
+                                        priority=1;
                                         identity = 'update';
                                         break;
                                     case '<<':
                                     case '>>':
+                                        priority=5;
                                         identity = 'bitwise';
                                         break;
                                     case '/=':
@@ -352,14 +500,15 @@
                                     case '|=':
                                     case '^=':
                                     case '%=':
-                                    case '<=':
-                                    case '>=':
+                                        priority=8;
                                         identity = 'assignment';
                                         break;
                                     case '**':
+                                        priority=3;
                                         identity = 'complex';
                                         break;
                                     case '=>':
+                                        priority=8;
                                         identity = 'keySymbol';
                                         break;
                                     default:
@@ -369,35 +518,39 @@
                                         switch (str){
                                             case '<':
                                             case '>':
+                                                priority=6;
                                                 identity = 'logical';
                                                 break;
                                             case '=':
+                                                priority=8;
                                                 identity = 'assignment';
                                                 break;
                                             case '+':
                                             case '-':
+                                                priority=4;
                                                 identity = 'single';
                                                 break;
                                             case '*':
                                             case '/':
                                             case '%':
+                                                priority=3;
                                                 identity = 'complex';
                                                 break;
                                             case '&':
                                             case '|':
                                             case '^':
+                                                priority=5;
                                                 identity = 'bitwise';
                                                 break;
                                             case '!':
+                                                priority=2;
                                                 identity = 'unitary';
                                                 break;
                                             default:
                                                 --this.index;
                                         }
                                 }
-
                         }
-
                     }
             }
 
@@ -409,7 +562,8 @@
                 value: str,
                 start: start,
                 end: this.index,
-                identity:identity
+                identity:identity,
+                priority:priority
             };
         }
 
