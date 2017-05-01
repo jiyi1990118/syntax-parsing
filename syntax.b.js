@@ -144,79 +144,66 @@
         this.expressionLex();
 
     };
-    
-    //表达式连接属性获取
-    syntaxParser.prototype.getExpAttr=function (strcut,isBefore) {
-        isBefore=isBefore === undefined ? true: isBefore;
-
-        var attr;
-        //表达式类型处理
-        switch (strcut.exp) {
-            //一元表达式
-            case 'UnaryExpression':
-                attr='argment';
-                break;
-            //二元表达式
-            case 'BinaryExpression':
-                attr=isBefore?'left':'right';
-                break;
-            //三元表达式
-            case 'TernaryExpression':
-                attr=isBefore?'condition':'mismatch';
-                break;
-            //自运算
-            case 'UpdateExpression':
-
-                break;
-            //分配运算
-            case 'AssignmentExpression':
-
-                break;
-            //成员表达式
-            case 'MemberExpression':
-
-                break;
-            //数组表达式
-            case 'ArrayExpression':
-
-                break;
-            //对象表达式
-            case 'ObjectExpression':
-
-                break;
-            //过滤器表达式
-            case 'FilterExpression':
-
-                break;
-        }
-    }
 
     //表达式连接
     syntaxParser.prototype.expConcat = function (strcut, expStruct) {
         expStruct = expStruct || this.expStruct;
 
         if (expStruct) {
-            var attr;
-            //检查是否表达式结构
-            if(expStruct.exp){
-                if(!strcut.exp){
-                    attr=this.getExpAttr(expStruct);
-                    expStruct[attr]=strcut;
-                    return expStruct;
-                }
 
-                //对比前后两个表达式的优先级
+            if(expStruct.exp){
+
+
                 if (expStruct.priority > strcut.priority) {
-                    attr=this.getExpAttr(expStruct);
-                    expStruct[attr]=this.expConcat(strcut,expStruct[attr]);
+                    expStruct.argment=this.expConcat(strcut,expStruct.argment);
                     return expStruct;
                 } else {
-                    attr=this.getExpAttr(strcut,false);
-                    strcut[attr]=this.expConcat(strcut[attr],expStruct);
+
+
                 }
+
+
+
             }else{
-                attr=this.getExpAttr(strcut,false);
-                strcut[attr]=expStruct;
+                //表达式类型处理
+                switch (strcut.exp) {
+                    //一元表达式
+                    case 'UnaryExpression':
+                        strcut.argment=expStruct;
+                        break;
+                    //二元表达式
+                    case 'BinaryExpression':
+                        strcut.right=expStruct;
+                        break;
+                    //三元表达式
+                    case 'TernaryExpression':
+
+                        break;
+                    //自运算
+                    case 'UpdateExpression':
+
+                        break;
+                    //分配运算
+                    case 'AssignmentExpression':
+
+                        break;
+                    //成员表达式
+                    case 'MemberExpression':
+
+                        break;
+                    //数组表达式
+                    case 'ArrayExpression':
+
+                        break;
+                    //对象表达式
+                    case 'ObjectExpression':
+
+                        break;
+                    //过滤器表达式
+                    case 'FilterExpression':
+
+                        break;
+                }
             }
         }
 
@@ -226,7 +213,7 @@
     //语法表达式扫描
     syntaxParser.prototype.expressionLex = function (atom, isAdopt) {
         atom = atom || this.atomLex();
-        isAdopt = isAdopt === undefined ? true : isAdopt;
+        isAdopt = typeof isAdopt === "undefined" ? true : isAdopt;
 
         var struct,
             expTemp = this.expTemp;
@@ -549,16 +536,17 @@
                     identity = 'unitary';
                     break;
                 default:
+
                     // 4个字符长度的符号
-                    str = this.source.substr(--this.index, 4);
+                    str = this.source.substr(this.index, 4);
                     if (str === '>>>=') {
-                        this.index += 4;
+                        this.index += 3;
                         priority = 8;
                         identity = 'assignment';
                     } else {
                         // 3个字符长度的符号
                         str = str.substr(0, 3);
-                        this.index += 3;
+                        this.index += 2;
 
                         switch (str) {
                             case '===':
@@ -621,9 +609,9 @@
                                         identity = 'keySymbol';
                                         break;
                                     default:
-                                        this.index --;
+                                        this.index -= 2;
                                         // 1个字符长度的符号
-                                        str = this.source[this.index--];
+                                        str = this.source[this.index++];
                                         switch (str) {
                                             case '<':
                                             case '>':
@@ -656,7 +644,7 @@
                                                 identity = 'unitary';
                                                 break;
                                             default:
-
+                                                --this.index;
                                         }
                                 }
                         }
