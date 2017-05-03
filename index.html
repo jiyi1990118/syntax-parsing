@@ -11,8 +11,13 @@
         //界定符
         var DelimiterLeft="{{",
             DelimiterRight="}}",
-//            str="html::code{{5+~++str+'fsdf\\we'+.2/3}} javascript";
-            str="html::code{{~++str}} javascript";
+//            str="html::code{{5*~++str+'fsdf\\we'+.2/3}} javascript";
+//            str="html::code{{~-~-+2*5?t:n?a:b/2}} javascript";
+//            str="html::code{{2?d:b[3+2?d:c]}} javascript";
+//            str="html::code{{2*(5+--t)}} javascript";
+//            str="html::code{{2*(a,b,c,2*~[3,6,2]+3)}} javascript";
+//            str="html::code{{b---2/g}} javascript";
+            str="html::code{{5+[2][0]+++2}} javascript";
 
         window.onload=function () {
 
@@ -34,10 +39,12 @@
         /*
          * dot 点号 1
          * unitary 一元运算符 2
+         *
          * single 加减运算 4
          * complex 乘除 乘方 运算 3
          * logical 逻辑运算 6
          * bitwise 位运算 5
+         *
          * ternary 三元运算 7
          * comma 逗号 1
          * semicolon 分号 1
