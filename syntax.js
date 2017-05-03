@@ -347,7 +347,7 @@
                                     nextAtom = this.atomLex();
 
                                     //检查是否后续是点或中括号来判断成员表达式
-                                    if(nextAtom && nextAtom.value === '[') {
+                                    if(nextAtom && nextAtom.value === '[' || nextAtom.value === '.' ) {
                                         struct = this.expMember(nextAtom, expTemp);
                                         nextAtom =this.nexAtom;
                                         this.nexAtom=undefined;
