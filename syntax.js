@@ -154,8 +154,8 @@
         this.expressionLex();
 
         //检查语法是否完整
-        if(this.expBlockEnd.length && !this.errMsg){
-            this.throwErr('表达式不完整缺少'+this.expBlockEnd.length+'个闭合符号 '+this.expBlockEnd.join(' , '))
+        if (this.expBlockEnd.length && !this.errMsg) {
+            this.throwErr('表达式不完整缺少' + this.expBlockEnd.length + '个闭合符号 ' + this.expBlockEnd.join(' , '))
         }
     };
 
@@ -167,7 +167,7 @@
     }
 
     //获取后面的表达式
-    syntaxParser.prototype.nextExpressionLex=function (atom, isAdopt) {
+    syntaxParser.prototype.nextExpressionLex = function (atom, isAdopt) {
         this.expStruct = null;
         this.expTemp.valueType = null;
         return this.expressionLex(atom, isAdopt);
@@ -199,10 +199,6 @@
             case 'TernaryExpression':
                 return isBefore ? 'condition' : 'mismatch';
                 break;
-            //分配运算
-            case 'AssignmentExpression':
-
-                break;
             //成员表达式
             case 'MemberExpression':
                 return isBefore ? 'object' : 'property';
@@ -213,6 +209,10 @@
                 break;
             //对象表达式
             case 'ObjectExpression':
+                return 'self';
+                break;
+            //分配运算
+            case 'AssignmentExpression':
 
                 break;
             //过滤器表达式
@@ -269,9 +269,9 @@
 
         isAdopt = isAdopt === undefined ? true : isAdopt;
 
-        var tmp,
-            struct,
+        var struct,
             nextAtom,
+            brackets,
             args = this.arguments,
             expTemp = this.expTemp;
 
@@ -333,10 +333,27 @@
                             case 'colon':
                                 //检查是否对象表达式模式
                                 if (this.expMode === 'Object') {
-                                    //记录当前匹配的对象属性
-                                    args.push({
-                                        key: this.expStruct
-                                    });
+                                    //检查是否以括号为key
+                                    if (expTemp.brackets) {
+                                        if (expTemp.brackets !== 2) {
+                                            return this.throwErr('语法错误，对象表达式key有误!')
+                                        }
+                                        if (this.expStruct.arguments.length === 1) {
+                                            args.push({
+                                                key: this.expStruct.arguments[0]
+                                            });
+                                        } else {
+                                            return this.throwErr('语法错误，对象表达式key有误!');
+                                        }
+                                        //记录当前匹配的对象属性
+
+                                    } else {
+                                        //记录当前匹配的对象属性
+                                        args.push({
+                                            key: this.expStruct
+                                        });
+                                    }
+
                                     this.nextExpressionLex();
                                     return;
                                 }
@@ -355,6 +372,7 @@
                         break;
                     default:
                         this.throwErr('语法表达式错误 ')
+                        console.log(atom, this.expStruct)
                 }
                 break;
             default:
@@ -382,20 +400,40 @@
                                 switch (atom.value) {
                                     //小括号
                                     case '(':
+                                        //记录表达式模式
+                                        var expMode = this.expMode;
+
+                                        this.expMode = 'brackets';
                                         this.addBlockEnd(')');
                                         this.expressionLex();
+
+                                        this.expMode = expMode;
+
+                                        //恢复当前参数
+                                        this.arguments = this.levelArgs[this.levelArgs.length - 1];
+
                                         //检查后续语法是否运算表达式
                                         if (this.expStruct.exp) {
                                             this.expStruct.priority = 1;
                                         }
+                                        brackets = 1;
                                         struct = this.expStruct;
-                                        break;
+
+                                    // if (!(expTemp.valueType === 'memory' || expTemp.valueType === 'identifier'))break;
+
                                     //中括号
                                     case '[':
-                                        struct = this.expArray(atom, expTemp);
+                                        if (!struct) {
+                                            brackets = 2;
+                                            struct = this.expArray(atom, expTemp);
+                                        }
                                     //大括号
                                     case '{':
-                                        struct = struct || this.expObject(atom, expTemp);
+                                        if (!struct) {
+                                            brackets = 3;
+                                            struct = this.expObject(atom, expTemp);
+                                        }
+
                                         nextAtom = this.atomLex();
 
                                         //检查是否后续是点或中括号来判断成员表达式
@@ -408,6 +446,7 @@
                                         if (nextAtom && nextAtom.identity === 'update') {
                                             struct = this.expUpdateAfter(nextAtom, expTemp);
                                         }
+
                                         break;
                                 }
 
@@ -417,6 +456,7 @@
                                 //检查是否能匹配语法块结束符号
                                 if (this.expBlockEnd.length && this.expBlockEnd.pop() === atom.value) {
                                     this.arguments = this.levelArgs.pop();
+                                    brackets = atom.value;
                                     break;
                                 }
                             default:
@@ -448,20 +488,24 @@
                             } else if (nextAtom.identity === 'update') {
                                 struct = this.expUpdateAfter(nextAtom, expTemp);
                             }
-
-                            if (!isAdopt) {
-                                this.preAtom = nextAtom;
-                            }
                         }
-
                         break;
                     default:
                         this.throwErr('未知表达式!')
                 }
         }
 
+        //检查当前的表达式是否属于括号表达式
+        if (brackets) {
+            expTemp.brackets = brackets;
+        } else {
+            delete expTemp.brackets;
+        }
+
         if (isAdopt && struct) {
             struct = this.expressionLex(nextAtom);
+        } else {
+            this.preAtom = nextAtom;
         }
         return struct;
     };
@@ -475,6 +519,7 @@
      * MemberExpression 成员表达式
      * ArrayExpression 数组表达式
      * ObjectExpression 对象表达式
+     * CallExpression 方法执行表达式
      * FilterExpression 过滤器表达式
      * */
 
@@ -577,6 +622,7 @@
                 return this.expStruct = struct;
             }
 
+
             return this.throwErr('自运算后面应该是标识量!', atom);
         }
 
@@ -650,13 +696,17 @@
         //数组表达式
         expression.expArray = function (atom, expTemp) {
             var struct = {
-                arguments: null,
-                exp: 'ArrayExpression',
-                priority: 1
-            };
+                    arguments: null,
+                    exp: 'ArrayExpression',
+                    priority: 1
+                },
+                expMode = this.expMode;
+
 
             //连接之前的表达式
             var tmpStruct = this.expConcat(this.expStruct, struct);
+
+            this.expMode = 'Array';
 
             this.addBlockEnd(']');
             this.nextExpressionLex();
@@ -669,7 +719,7 @@
                     struct.arguments.push(last);
                 }
             } else {
-                struct.arguments = this.expStruct || [];
+                struct.arguments = this.expStruct ? [this.expStruct] : [];
             }
 
             //还原当前处理的arguments
@@ -677,6 +727,7 @@
 
             expTemp.valueType = 'memory';
             this.expStruct = tmpStruct;
+            this.expMode = expMode;
 
             return struct;
         }
@@ -690,7 +741,8 @@
             };
 
             //连接之前的表达式
-            var tmpStruct = this.expConcat(this.expStruct, struct);
+            var tmpStruct = this.expConcat(this.expStruct, struct),
+                expMode = this.expMode;
 
             expTemp.valueType = null;
             this.expStruct = null;
@@ -705,9 +757,10 @@
             //进行属性拼接
             if (this.arguments) {
                 struct.property = this.arguments;
+                //防止对象中最后遗留逗号
                 if (this.expStruct) {
-                    var argLen=this.arguments.length;
-                    if(argLen !== 0){
+                    var argLen = this.arguments.length;
+                    if (argLen !== 0) {
                         this.arguments[argLen - 1].value = this.expStruct
                     }
                 }
@@ -716,9 +769,13 @@
             expTemp.valueType = 'memory';
             this.expStruct = tmpStruct;
 
-            delete this.arguments;
-            delete this.expMode;
+            this.expMode = expMode;
             return struct;
+        }
+
+        //方法执行表达式
+        expression.expCall = function () {
+
         }
 
         //分配表达式
@@ -1129,5 +1186,4 @@
         console.log(new syntaxParser(code))
         // new syntaxParser(code)
     }
-
 })

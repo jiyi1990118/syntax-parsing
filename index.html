@@ -19,10 +19,10 @@
 //            str="html::code{{b---2/g}} javascript";
 //            str="html::code{{5+[2][0].k+++2}} javascript";
 //            str="html::code{{[1,++[a,c,b][a,1],j] }} javascript";
-//            str="html::code{{++{[5]:c,t:{} }.t }} javascript";
-            str="html::code{{ {[5]:c,t:{2:c ,b:{c:[n]} } } }} javascript";
+//            str="html::code{{ {[5]:c,t:{2:c ,b:({c:[n]}).t } } }} javascript";
+            str="html::code{{ {  [[1,2,3]] :c,t:{2:c ,b:({c:[n,6]}).t } } }} javascript";
 
-        window.onload=function () {
+        window.addEventListener('load',function () {
 
             //获取界定符位置
             var DelimiterStart=str.indexOf(DelimiterLeft),
@@ -38,7 +38,7 @@
             syntax(str)
             console.log(Date.now()-sDate)
 
-        }
+        })
 
 
         /*
