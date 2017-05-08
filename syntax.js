@@ -112,9 +112,9 @@
         //语法块队列存储
         this.expBlockEnd = [];
         //表达式参数记录
-        this.arguments = null;
+        this.arguments = [];
         //表达式层级参数
-        this.levelArgs = [];
+        this.levelArgs = [this.arguments];
         //语法表达式结构
         this.expStruct = null;
         //语法表达式处理临时数据
@@ -188,7 +188,7 @@
                 break;
             //过滤器表达式
             case 'FilterExpression':
-
+                return 'lead';
                 break;
         }
     }
@@ -260,6 +260,12 @@
                     nextAtom = this.getSoonAtom();
                     break;
                 }
+                if(expTemp.valueType !== 'literal'){
+                    if(atom.identity === 'assignment'){
+                        struct = this.expAssignment(atom, expTemp);
+                        break;
+                    }
+                }
             case atomType.Null:
             case atomType.String:
             case atomType.Numeric:
@@ -278,8 +284,13 @@
                             case 'interrogation':
                                 struct = this.expTernary(atom, expTemp);
                                 break;
+                            //自运算
                             case 'update':
                                 struct = this.expUpdateAfter(atom, expTemp);
+                                break;
+                            //过滤运算
+                            case 'filter':
+                                struct = this.expFilter(atom, expTemp);
                                 break;
                             //逗号
                             case 'comma':
@@ -540,12 +551,6 @@
 
             //获取下一个语法表达式
             this.nextExpressionLex(nextAtom, false);
-
-            //检查当前运算符号是否过滤器起始符号 |
-
-            if (atom.value === '|') {
-                console.log('yes', this.expStruct, nextAtom)
-            }
 
             var struct = {
                 left: null,
@@ -860,23 +865,74 @@
 
             var nextAtom = this.atomLex();
 
-            if (nextAtom.value === '.' || nextAtom.value === '[') {
-                struct = this.expMember(nextAtom, expTemp);
-            } else {
-                this.soonAtom = nextAtom;
+            if(nextAtom){
+                if (nextAtom.value === '.' || nextAtom.value === '[') {
+                    struct = this.expMember(nextAtom, expTemp);
+                } else {
+                    this.soonAtom = nextAtom;
+                }
             }
 
             return struct;
         }
 
         //分配表达式
-        expression.expAssignment = function () {
+        expression.expAssignment = function (atom, expTemp) {
+            var struct = {
+                    exp: 'AssignmentExpression',
+                    value: null,
+                    identifier:this.expStruct,
+                    operator: atom.value,
+                    priority: atom.priority
+                };
 
+            this.nextExpressionLex();
+            struct.value=this.expStruct;
+
+            return this.expStruct=struct;
         }
 
         //过滤表达式
-        expression.expFilter = function () {
+        expression.expFilter = function (atom, expTemp) {
+            var struct = {
+                    exp: 'FilterExpression',
+                    arguments: [],
+                    operator: atom.value,
+                    priority: atom.priority,
+                    callee: null,
+                    lead:null
+                },
+                tmpStruct = this.expConcat(struct);
 
+            this.nextExpressionLex(this.atomLex(),false);
+
+            if(this.expStruct.exp){
+                switch (this.expStruct.exp){
+                    case 'MemberExpression':
+                        struct.callee=this.expStruct;
+                        break;
+                    case 'CallExpression':
+                        struct.callee=this.expStruct.callee;
+                        struct.arguments=this.expStruct.arguments;
+                        break;
+                    default:
+                        return this.throwErr('过滤器表达式错误!')
+                }
+            }else{
+                switch (this.expStruct.type){
+                    case atomType.Keyword:
+                    case atomType.identifier:
+                        struct.callee=this.expStruct;
+                        break;
+                    default:
+                        return this.throwErr('过滤器数据类型错误!')
+                }
+            }
+
+            this.expStruct=tmpStruct;
+            tmpStruct.valueType='literal';
+
+            return struct;
         }
 
 
@@ -1002,6 +1058,7 @@
          * keySymbol 关键符号 8
          * assignment 分配运算 8
          * update 自运算  2
+         * filter 3 过滤运算
          * */
 
         //标点
@@ -1128,6 +1185,11 @@
                                     case '=>':
                                         priority = 9;
                                         identity = 'keySymbol';
+                                        break;
+                                    //过滤运算符号
+                                    case '|:':
+                                        priority = 3;
+                                        identity = 'filter';
                                         break;
                                     default:
                                         this.index -= 2;
