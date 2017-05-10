@@ -1,11 +1,13 @@
 /**
  * Created by xiyuan on 17-4-25.
  */
-(function (syntaxFn) {
-    if (typeof define === "function" && define.cmd) {
+(function (syntaxFn,exports) {
+    if(typeof module === "object" && typeof module.exports === "object" ){
+        module.exports = syntaxFn();
+    }else if (typeof define === "function" && define.cmd) {
         define(syntaxFn)
     } else {
-        this.syntax = syntaxFn();
+        exports.syntax = syntaxFn();
     }
 })(function () {
 
@@ -1342,4 +1344,4 @@
         console.log(new syntaxParser(code))
         // new syntaxParser(code)
     }
-})
+},this)
